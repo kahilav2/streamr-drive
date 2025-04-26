@@ -1,0 +1,27 @@
+{
+  "name": "streamr-drive",
+  "version": "1.0.0",
+  "description": "Google Drive-like file manager using Streamr Network",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "client": "node streamr-drive-client.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "streamr",
+    "storage",
+    "file-manager",
+    "raspberry-pi"
+  ],
+  "author": "",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "@streamr/sdk": "^101.0.1",
+    "streamr-chunker": "^0.1.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
