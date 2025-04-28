@@ -8,6 +8,8 @@ import StreamrMessageController from './message-controller.js';
 import { createHash } from 'crypto';
 import os from 'os';
 
+const TEMP_FOLDER_NAME = 'temp';
+
 class StreamrDrive {
   constructor(config) {
     this.config = {
@@ -15,6 +17,7 @@ class StreamrDrive {
       privateKey: process.env.STREAMR_PRIVATE_KEY,
       streamId: process.env.STREAMR_STREAM_ID,
       deviceId: this.generateDeviceId(),
+      tempCleanupInterval: 24 * 60 * 60 * 1000, // 24 hours
       ...config
     };
     
@@ -22,6 +25,7 @@ class StreamrDrive {
     this.streamrClient = null;
     this.streamrChunker = null;
     this.streamUrl = null;
+    this.tempCleanupTimer = null;
   }
 
   async initialize() {
@@ -35,6 +39,9 @@ class StreamrDrive {
     
     // Initialize Streamr client
     await this.initializeStreamrClient();
+    
+    // Setup temp folder cleanup
+    await this.setupTempFolderCleanup();
     
     console.log(`StreamrDrive initialized and listening on stream: ${this.streamUrl}`);
     console.log(`Storage directory: ${this.config.storageDir}`);
@@ -345,6 +352,47 @@ class StreamrDrive {
     }
   }
 
+  async setupTempFolderCleanup() {    
+    this.tempCleanupTimer = setInterval(() => {
+      this.cleanupTempFolder().catch(err => {
+        console.error('Error during scheduled temp folder cleanup:', err);
+      });
+    }, this.config.tempCleanupInterval);
+  }
+
+  async cleanupTempFolder() {
+    const tempFolderPath = path.join(this.config.storageDir, TEMP_FOLDER_NAME);
+    
+    try {
+      try {
+        await fs.access(tempFolderPath);
+      } catch (error) {
+        // Temp folder doesn't exist
+        return;
+      }
+      
+      console.log('Cleaning up files in temp folder...');
+      
+      const entries = await fs.readdir(tempFolderPath, { withFileTypes: true });
+      let deletedCount = 0;
+      
+      for (const entry of entries) {
+        const entryPath = path.join(tempFolderPath, entry.name);
+        
+        if (entry.isDirectory()) {
+          await fs.rm(entryPath, { recursive: true });
+        } else {
+          await fs.unlink(entryPath);
+        }
+        deletedCount++;
+      }
+      
+      console.log(`Temp folder cleanup complete - removed ${deletedCount} items`);
+    } catch (error) {
+      console.error('Error during temp folder cleanup:', error);
+    }
+  }
+
   async deleteFile(command) {
     try {
       if (!command.fileName) {
@@ -564,6 +612,11 @@ class StreamrDrive {
 
   async shutdown() {
     console.log('Shutting down StreamrDrive...');
+    
+    if (this.tempCleanupTimer) {
+      clearInterval(this.tempCleanupTimer);
+      this.tempCleanupTimer = null;
+    }
     
     if (this.messageController) {
       await this.messageController.destroy();
