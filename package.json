@@ -18,7 +18,7 @@
   "author": "",
   "dependencies": {
     "dotenv": "^16.3.1",
-    "@streamr/sdk": "^101.0.1",
+    "@streamr/sdk": "^103.0.0",
     "streamr-chunker": "^0.1.2"
   },
   "engines": {
